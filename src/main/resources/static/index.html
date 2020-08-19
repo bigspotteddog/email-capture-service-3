@@ -38,7 +38,7 @@
           <h1 class="mb-5">Send me an email when registration begins!</h1>
         </div>
         <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
-          <form method="POST" action="/notify-me">
+          <form id="notify-me" method="POST" action="/notify-me">
             <input name="campaign" type="hidden" value="asdfqw">
             <div class="form-row">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
@@ -160,7 +160,7 @@
           <h2 class="mb-4">Ready to get started? Sign up now and get 40% off the registration price!</h2>
         </div>
         <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
-          <form method="POST" action="/sign-up">
+          <form id="sign-up" method="POST" action="/sign-up">
             <div class="form-row">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
                 <input name="email" type="email" class="form-control form-control-lg" placeholder="Enter your email...">
@@ -200,30 +200,34 @@
   <script src="vendor/jquery/jquery.min.js"></script>
   <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script>
-    $(document).ready(function () {
-      $('form').on('submit', function (ev) {
-        ev.preventDefault();
-        var form = $(ev.currentTarget);
+    const submit = function(ev) {
+      ev.preventDefault();
 
-        const data = {
-          campaign: form.find('[name="campaign"]').val(),
-          email: form.find('[name="email"]').val()
-        };
+      const form = ev.currentTarget;
+      const data = {
+        campaign: form['campaign'].value,
+        email: form['email'].value
+      };
+      console.log(data);
 
-        (async() => {
-          let response = await fetch(form.attr('action'), {
-            method: form.attr('method'),
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8'
-            },
-            body: JSON.stringify(data)
-          });
+      (async() => {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+          },
+          body: JSON.stringify(data)
+        });
 
-          let result = await response.json();
-          console.log(result);
-          $('#staticBackdrop').modal('show');
-        })();
-      });
+        const result = await response.json();
+        console.log(result);
+        $('#staticBackdrop').modal('show');
+      })();
+    };
+
+    document.addEventListener('DOMContentLoaded', function(ev) {
+      document.getElementById('notify-me').addEventListener('submit', submit);
+      document.getElementById('sign-up').addEventListener('submit', submit);
     });
   </script>
 </body></html>
