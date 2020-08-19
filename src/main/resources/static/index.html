@@ -206,16 +206,22 @@
     });
 
     const submit = function(ev) {
+      // prevent the form from doing its default submit
       ev.preventDefault();
 
+      // get the form from the event
       const form = ev.currentTarget;
+
+      // create the data to submit from the form
       const data = {
         campaign: form['campaign'].value,
         email: form['email'].value
       };
       console.log(data);
 
+      // submit the data
       (async() => {
+        // send the post request
         const response = await fetch(form.action, {
           method: 'POST',
           headers: {
@@ -224,8 +230,11 @@
           body: JSON.stringify(data)
         });
 
+        // get the result
         const result = await response.json();
         console.log(result);
+
+        // show the modal message to the user
         $('#staticBackdrop').modal('show');
       })();
     };
