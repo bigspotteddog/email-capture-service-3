@@ -1,26 +1,19 @@
 package com.fullstackclouddeveloper.emailcaptureservice;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
-import com.google.cloud.firestore.Query;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.WriteResult;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
+import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
 import com.sendgrid.helpers.mail.objects.Content;
@@ -28,16 +21,10 @@ import com.sendgrid.helpers.mail.objects.Email;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RestController   ;
 
 @SpringBootApplication
 @RestController
@@ -47,125 +34,53 @@ public class EmailCaptureServiceApplication {
         SpringApplication.run(EmailCaptureServiceApplication.class, args);
     }
 
-    @GetMapping("/emails")
-    public List<Map<String, Object>> getEmails(@CookieValue(name = "zoom-meeting", required = false) String zoomMeetingCookie) throws ExecutionException, InterruptedException, IOException {
-        List<Map<String, Object>> list = new ArrayList<>();
-
-        Firestore db = getFirestore();
-
-        ApiFuture<QuerySnapshot> query = db.collection("emails").get();
-        QuerySnapshot querySnapshot = query.get();
-        List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
-
-        for (QueryDocumentSnapshot document : documents) {
-            list.add(document.getData());
-        }
-
-        return list;
-    }
-
-    @GetMapping("/invitation")
-    public Map<String, Object> getInvitation(@RequestParam("campaign") String campaign,
-            @CookieValue(name = "zoom-meeting", required = false) String zoomMeetingCookie)
-            throws InterruptedException, ExecutionException, IOException {
-
-        Firestore db = getFirestore();
-
-        System.out.println(campaign);
-
-        if (zoomMeetingCookie == null) {
-            return getInvitationNotFoundMessage();
-        }
-
-        CollectionReference emails = db.collection("emails");
-        Query q = emails.whereEqualTo("hash", zoomMeetingCookie);
-        ApiFuture<QuerySnapshot> querySnapshot = q.get();
-        List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
-
-        if (documents.isEmpty()) {
-            return getInvitationNotFoundMessage();
-        }
-
-        return documents.get(0).getData();
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello world!";
     }
 
     @PostMapping("/notify-me")
-    public ResponseEntity<Map<String, String>> post(@RequestBody Map<String, String> request,
-            @CookieValue(name = "zoom-meeting", required = false) String zoomMeetingCookie)
-            throws IOException, ExecutionException, InterruptedException {
-
-        System.out.println(zoomMeetingCookie);
-
-        String campaign = request.get("campaign");
-        String email = request.get("email");
-        String hash = UUID.randomUUID().toString();
-
-        Map<String, String> data = saveEmail(campaign, email, hash);
-        sendResponseEmail(campaign, email);
-
-        String cookieName = "zoom-meeting";
-        Duration maxAge = Duration.ofDays(30);
-
-        HttpCookie cookie = getCookie(hash, cookieName, maxAge);
-        
-        return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
-            .body(data);
-    }
-
-    private HttpCookie getCookie(String hash, String cookieName, Duration maxAge) {
-        HttpCookie cookie = ResponseCookie.from(cookieName, hash)
-            .path("/")
-            .httpOnly(true)
-            .maxAge(maxAge)
-            .build();
-        return cookie;
-    }
-
-    private Map<String, String> saveEmail(String campaign, String email, String hash) throws IOException {
+    public String notifyMe(@RequestBody Map<String, String> body)
+            throws IOException, InterruptedException, ExecutionException {
         Firestore db = getFirestore();
-        DocumentReference document = db.collection("emails").document();
-        Map<String, String> data = new LinkedHashMap<>() {{
-            put("campaign", campaign);
-            put("email", email);
-            put("hash", hash);
-        }};
-        document.set(data);
-        System.out.println(data);
-        return data;
+        String email = body.get("email");
+        DocumentReference document = db.collection("emails").document(email);
+        ApiFuture<WriteResult> data = document.set(body);
+        System.out.println(data.get().getUpdateTime()); 
+
+        sendEmail(email);
+
+        return new ObjectMapper().writeValueAsString(body);
     }
 
-    private void sendResponseEmail(String campaign, String email) throws IOException {
-        Email from = new Email("support@nobodyelses.com");
+    private void sendEmail(String email) throws IOException {
+        Email from = new Email("registration@fullstackclouddeveloper.com", "Fullstack Cloud Developer");
         String subject = "Fullstack cloud developer course registration";
         Email to = new Email(email);
         Content content = new Content("text/plain", "You've been added to the list! We'll notify you when registration begins.");
         Mail mail = new Mail(from, subject, to, content);
-
+    
         SendGrid sg = new SendGrid(System.getenv("SENDGRID_API_KEY"));
-        Request send = new Request();
+        Request request = new Request();
         try {
-            send.setMethod(Method.POST);
-            send.setEndpoint("mail/send");
-            send.setBody(mail.build());
-            sg.api(send);
+          request.setMethod(Method.POST);
+          request.setEndpoint("mail/send");
+          request.setBody(mail.build());
+          Response response = sg.api(request);
+          System.out.println(response.getStatusCode());
+          System.out.println(response.getBody());
+          System.out.println(response.getHeaders());
         } catch (IOException ex) {
-            throw ex;
+          throw ex;
         }
     }
 
     private Firestore getFirestore() throws IOException {
         FirestoreOptions firestoreOptions =
-                FirestoreOptions.getDefaultInstance().toBuilder()
-                        .setProjectId("email-capture-service-3")
-                        .setCredentials(GoogleCredentials.getApplicationDefault())
-                        .build();
+            FirestoreOptions.getDefaultInstance().toBuilder()
+                .setProjectId("email-capture-service-3")
+                .setCredentials(GoogleCredentials.getApplicationDefault())
+                .build();
         return firestoreOptions.getService();
-    }
-
-    private Map<String, Object> getInvitationNotFoundMessage() {
-        return new HashMap<String, Object>() {{
-            put("message", "Invitation not found. Please re-register and try again.");
-        }};
-    }
+        }
 }

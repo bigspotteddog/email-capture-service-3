@@ -38,8 +38,7 @@
           <h1 class="mb-5">Send me an email when registration begins!</h1>
         </div>
         <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
-          <form id="notify-me" method="POST" action="/notify-me">
-            <input name="campaign" type="hidden" value="asdfqw">
+          <form id="notify-me-form" method="POST" action="/notify-me">
             <div class="form-row">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
                 <input name="email" type="email" class="form-control form-control-lg" placeholder="Enter your email...">
@@ -160,7 +159,7 @@
           <h2 class="mb-4">Ready to get started? Sign up now and get 40% off the registration price!</h2>
         </div>
         <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
-          <form id="sign-up" method="POST" action="/sign-up">
+          <form id="sign-up-form" method="POST" action="/sign-up">
             <div class="form-row">
               <div class="col-12 col-md-9 mb-2 mb-md-0">
                 <input name="email" type="email" class="form-control form-control-lg" placeholder="Enter your email...">
@@ -176,8 +175,7 @@
   </section>
 
   <!-- Modal -->
-  <div class="modal fade" id="staticBackdrop" data-backdrop="static" tabindex="-1" role="dialog"
-    aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal fade" id="staticBackdrop" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
@@ -187,7 +185,7 @@
           </button>
         </div>
         <div class="modal-body">
-          You've been added to the list! We'll notify you when registration begins.
+          You've been added to the list. We'll notify you when registration begins.
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
@@ -200,43 +198,30 @@
   <script src="vendor/jquery/jquery.min.js"></script>
   <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function(ev) {
-      document.getElementById('notify-me').addEventListener('submit', submit);
-      document.getElementById('sign-up').addEventListener('submit', submit);
-    });
-
     const submit = function(ev) {
-      // prevent the form from doing its default submit
       ev.preventDefault();
-
-      // get the form from the event
       const form = ev.currentTarget;
+      const email = form.elements['email'].value;
 
-      // create the data to submit from the form
-      const data = {
-        campaign: form['campaign'].value,
-        email: form['email'].value
-      };
-      console.log(data);
+      const data = {email: email};
 
-      // submit the data
       (async() => {
-        // send the post request
         const response = await fetch(form.action, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json;charset=utf-8'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(data)
         });
 
-        // get the result
-        const result = await response.json();
-        console.log(result);
-
-        // show the modal message to the user
+        const json = await response.json();
         $('#staticBackdrop').modal('show');
       })();
     };
+
+    document.addEventListener("DOMContentLoaded", function(event) { 
+      document.getElementById('notify-me-form').addEventListener('submit', submit); 
+      document.getElementById('sign-up-form').addEventListener('submit', submit); 
+    });
   </script>
 </body></html>
